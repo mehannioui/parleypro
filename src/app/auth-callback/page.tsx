@@ -1,25 +1,30 @@
 'use client';
 
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { trpc } from '../_trpc/client';
 import { Loader2 } from 'lucide-react';
 
 const Page = () => {
   const router = useRouter();
 
-  React.useEffect(() => {
-    if (!router.isReady) return; // Add this line
+  const searchParams = useSearchParams();
+  const origin = searchParams.get('origin');
 
-    const { error } = trpc.authCallback.useQuery(undefined, {
-      retry: true,
-      retryDelay: 500,
-    });
-
-    // Handle error cases in the component body
-    if (error?.data?.code === 'UNAUTHORIZED') {
-      router.push('/sign-in');
-    }
-  }, [router.isReady]); // Modify this line
+  trpc.authCallback.useQuery(undefined, {
+    onSuccess: ({ success }) => {
+      if (success) {
+        // user is synced to db
+        router.push(origin ? `/${origin}` : '/dashboard');
+      }
+    },
+    onError: (err) => {
+      if (err.data?.code === 'UNAUTHORIZED') {
+        router.push('/sign-in');
+      }
+    },
+    retry: true,
+    retryDelay: 500,
+  });
 
   return (
     <div className='w-full mt-24 flex justify-center'>
